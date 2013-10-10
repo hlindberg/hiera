@@ -21,8 +21,10 @@ class Hiera::Interpolate
     def get_interpolation_method_and_key(data)
       if (match = data.match(METHOD_INTERPOLATION))
         case match[1]
-        when 'hiera' then [:hiera_interpolate, match[2]]
-        when 'scope' then [:scope_interpolate, match[2]]
+        when 'hiera'   then [:hiera_interpolate,   match[2]]
+        when 'scope'   then [:scope_interpolate,   match[2]]
+        when 'trusted' then [:trusted_interpolate, match[2]]
+        when 'facts'   then [:facts_interpolate,   match[2]]
         end
       elsif (match = data.match(INTERPOLATION))
         [:scope_interpolate, match[1]]
@@ -35,6 +37,31 @@ class Hiera::Interpolate
       if value.nil? || value == :undefined
         value = extra_data[key]
       end
+      data.sub(INTERPOLATION, value.to_s)
+    end
+    private :scope_interpolate
+
+    def trusted_interpolate(data, key, scope, extra_data)
+      scope_keyed_interpolate(data, key, scope, extra_data, 'trusted')
+    end
+
+    def facts_interpolate(data, key, scope, extra_data)
+      scope_keyed_interpolate(data, key, scope, extra_data, 'facts')
+    end
+
+    def scope_keyed_interpolate(data, key, scope, extra_data, scope_key)
+      hash = scope[scope_key]
+      if hash.nil?
+        value = nil
+      else
+        value = hash[key]
+      end
+      if value.nil? || value == :undefined
+        value = extra_data[key]
+      end
+      # TODO: This is highly questionable - it adds hiera interpolation to trusted data
+      # and facts. (Should probably not be done for any scope lookup).
+      #
       data.sub(INTERPOLATION, value.to_s)
     end
     private :scope_interpolate
